@@ -1,4 +1,5 @@
 (ns toy-ml.linear)
+(use '(toy-ml core))
 (use '(incanter core))
 
 (defn normalize [input]
@@ -21,21 +22,33 @@
 (defn pcn
   "Takes input matrix(each colume is a data point) and target matrix(each column is a taget vector),
 learning rate and a function indicating when to stop learning, return the learned weights."
-  [input target l-rate end-fn]
-  (let [normalized (normalize input)
+  [input-mat target l-rate end-fn]
+  (let [normalized (normalize input-mat)
         weights (rand-matrix 1 (nrow normalized)
-                              (nrow target))]
+                              (ncol target))]
     (loop [w weights iter 1]
-      (let [ys (trans (matrix (matrix-map activate (mmult (trans w) normalized))))] ;; ugly...fix!
+      (let [ys (trans (m-map activate
+                             (mmult (trans w) normalized)))]
         (if (end-fn iter) w
             (recur (plus w
                          (mult l-rate
                                (mmult normalized
-                                      (trans (minus target ys)))))
+                                      (minus target ys))))
                    (+ iter 1)))))))
 
-(defn predict [input weights]
+
+
+(defn pcn-predict [input weights]
   (activate (mmult (trans weights) (normalize input))))
 
-;; (pcn (trans (matrix [[0 0] [0 1] [1 0] [1 1]]))
-;;		    (trans (matrix [0 1 1 1])) 0.1 (end-after-iter 1000))
+(defn pcn-or [input]
+  (pcn-predict input (pcn (trans (matrix [[0 0] [0 1] [1 0] [1 1]]))
+                          (matrix [0 1 1 1]) 0.1 (end-after-iter 200))))
+
+(defn pcn-parity [input]
+  "Will give poor result as it is not linearly seperapable"
+  (if (not (= (nrow input) 3))
+    (assert input "expecting a colum vector in R^3")
+    (pcn-predict input (pcn (trans (matrix [[0 0 0] [0 0 1] [0 1 0] [1 0 0]
+                                            [1 1 0] [1 0 1] [0 1 1] [1 1 1]]))
+                            (matrix [1 0 0 0 1 1 1 0]) 0.1 (end-after-iter 200)))))
