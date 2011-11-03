@@ -12,9 +12,6 @@
   ([n mat]
      (matrix (matrix-map (fn [x] (rand 1)) mat))))
 
-(defn end-after-iter [iter]
-  (fn [n] (if (>= n iter) true false)))
-
 (defn activate [val]
   (if (> val 0) 1 0)
   )
