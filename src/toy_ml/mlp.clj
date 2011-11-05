@@ -4,6 +4,7 @@
 
 ;; todo, momentem; confmax; early stop or regularization?
 
+
 (defn initial-weights [inputs targets hidden]
   (defn- rand-init [n] (- (rand (/ 2 (sqrt n))) (/ 1 (sqrt n))))
   (defn- each-adj-pair [col]
