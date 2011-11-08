@@ -23,3 +23,9 @@ applied to a vector."
 (defn end-after-iter [iter]
   (fn [n] (if (>= n iter) true false)))
 
+(defn sum-correct [x]
+  (defn- sum-scalar-or-seq [x]
+    (if (sequential? x) (sum x) x))
+  (if (matrix? x)
+    (let [row-sum (reduce plus x)]
+      (sum-scalar-or-seq row-sum))))

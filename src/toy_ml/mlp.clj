@@ -56,12 +56,9 @@
                  (mmult (intecept (last h-acts))
                         (last weights)))])))
 
-(defn sum-improved [x]
-  (if (sequential? x) (sum x) x))
-
 (defn cost [outputs targets weights reg-coff]
-  (/ (+ (sum (mult (minus outputs targets) (minus outputs targets)))
-        (* (sum (map (fn[w] (sum (map sum-improved (mult w w)))) weights)) reg-coff))
+  (/ (+ (sum-correct (mult (minus outputs targets) (minus outputs targets)))
+        (* (sum (map (fn[w] (sum-correct (mult w w))) weights)) reg-coff))
      (nrow outputs)))
 
 (defn- hidden-act-weight-pairs
@@ -123,4 +120,5 @@
                      (+ 1 iter))))))))
 
 (defn confmat [outputs targets]
+  
   )
