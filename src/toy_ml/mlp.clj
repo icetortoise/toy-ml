@@ -2,8 +2,7 @@
 (use '(toy-ml core))
 (use '(incanter core))
 
-;; todo, momentem; confmax; early stop or regularization?
-
+;; todo, confmat; 
 
 (defn initial-weights [inputs targets hidden]
   (defn- rand-init [n] (- (rand (/ 2 (sqrt n))) (/ 1 (sqrt n))))
@@ -28,8 +27,8 @@
   {:forward (fn [x] (/ 1 (+ 1 (exp (- (* beta x))))))
    :backward (fn [targets outputs]
                (mult (minus targets outputs)
-                        outputs
-                        (minus 1 outputs)))})
+                     outputs
+                     (minus 1 outputs)))})
 
 (defn make-linear []
   {:forward identity
@@ -45,13 +44,25 @@
                     (nrow outputs)))}))
 
 (defn mlp-forward [inputs weights forward-fn]
-  (defn- compute-activations [previous weight]
+  (defn- compute-h-act [previous weight]
     (conj previous
           (m-map forward-fn
                  (mmult (intecept (last previous))
                         weight))))
-  (rest (reduce compute-activations
-                (cons [inputs] weights))))
+  (let [h-acts (rest (reduce compute-activations
+                            (cons [inputs] (drop-last weights))))]
+    (concat h-acts
+            [(m-map (:forward (make-logistic 1))
+                 (mmult (intecept (last h-acts))
+                        (last weights)))])))
+
+(defn sum-improved [x]
+  (if (sequential? x) (sum x) x))
+
+(defn cost [outputs targets weights reg-coff]
+  (/ (+ (sum (mult (minus outputs targets) (minus outputs targets)))
+        (* (sum (map (fn[w] (sum (map sum-improved (mult w w)))) weights)) reg-coff))
+     (nrow outputs)))
 
 (defn- hidden-act-weight-pairs
   [acts weights]
@@ -66,24 +77,31 @@
         (unintecept (mult (intecept act) (minus 1 (intecept act))
                           (mmult (last prev-deltas) (trans weight))))))
 
-(defn- new-weight [weight delta input-or-hidden-act]
-  (plus weight
-        (mmult (trans (intecept input-or-hidden-act))
-               delta)))
+(defn- new-weight-fn [reg-coff l-rate n-inputs]
+  (defn- bind-zero-first-row [m]
+    (bind-rows (matrix 0 1 (ncol m))
+               (rest m)))
+  (fn [weight delta input-or-hidden-act]
+    (plus weight
+          (mult l-rate
+                (minus (mmult (trans (intecept input-or-hidden-act))
+                              delta)
+                       (mult reg-coff
+                             (div (bind-zero-first-row weight) n-inputs)))))))
 
 (defn mlp-backward
-  ([inputs targets activations weights backward-fn]
+  ([inputs targets activations weights backward-fn reg-coff l-rate]
      (let [delta-out (backward-fn targets (last activations))
            h-deltas (reduce h-delta
                             (cons [delta-out]
                                   (hidden-act-weight-pairs
                                    activations weights)))]
-       (map new-weight
+       (map (new-weight-fn reg-coff l-rate (nrow inputs))
             weights
             (reverse (cons delta-out h-deltas))
             (cons inputs (drop-last activations))))))
 
-(defn mlp-train [inputs targets hidden momentum act-fns end-fn]
+(defn mlp-train [inputs targets hidden reg-coff l-rate act-fns end-fn]
   (let [weights (initial-weights inputs targets hidden)]
     (loop [weights weights
            inputs inputs
@@ -93,10 +111,16 @@
             (mlp-forward inputs weights (:forward act-fns))
             new-weights
             (mlp-backward inputs targets activations
-                          weights (:backward act-fns))]
+                          weights (:backward act-fns)
+                          reg-coff l-rate)]
+;        (if (= 1 (mod iter 100))
+;          (println  (cost (last activations) targets weights reg-coff)))
         (if (end-fn iter) new-weights
             (let [new_order (shuffle (range (nrow inputs)))]
               (recur new-weights
                      ($ new_order :all inputs)
                      ($ new_order :all targets)
                      (+ 1 iter))))))))
+
+(defn confmat [outputs targets]
+  )
