@@ -29,3 +29,13 @@ applied to a vector."
   (if (matrix? x)
     (let [row-sum (reduce plus x)]
       (sum-scalar-or-seq row-sum))))
+
+(defn max-val-index [coll]
+  (reduce 
+   (fn [[val-1 pos-1] [val-2 pos-2]]
+     (if (< val-1 val-2) [val-2 pos-2]
+         [val-1 pos-1]))
+   (partition 2 (interleave
+                 coll
+                 (range (count coll))))))
+                     
