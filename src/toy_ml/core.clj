@@ -39,3 +39,21 @@ applied to a vector."
                  coll
                  (range (count coll))))))
                      
+
+(defn- conf-row [row]
+  (if (sequential? row)
+    (let [[val index] (max-val-index row)]
+      (assoc (vec (repeat (count row) 0))
+        index 1))
+    (recur [row (- 1 row)])))
+
+(defn confmat [outputs targets]
+  (let [output-classified (matrix (map conf-row outputs))
+        targets-classified (matrix (map conf-row targets))]
+    (mmult (trans output-classified)
+           targets-classified)))
+
+(defn correct-percentage [outputs targets]
+  (let [confmat (confmat outputs targets)]
+    (* 100
+       (/ (trace confmat) (sum-correct confmat)))))

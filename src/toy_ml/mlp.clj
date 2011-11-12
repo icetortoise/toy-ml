@@ -2,6 +2,7 @@
 (use '(toy-ml core))
 (use '(incanter core))
 
+;; todo: softmax
 (defn initial-weights [inputs targets hidden]
   (defn- rand-init [n] (- (rand (/ 2 (sqrt n))) (/ 1 (sqrt n))))
   (defn- each-adj-pair [col]
@@ -108,8 +109,8 @@
             (mlp-backward inputs targets activations
                           weights (:backward act-fns)
                           reg-coff l-rate)]
-;        (if (= 1 (mod iter 100))
-;          (println  (cost (last activations) targets weights reg-coff)))
+        (if (= 0 (mod iter 100))
+          (println  (cost (last activations) targets weights reg-coff)))
         (if (end-fn iter) new-weights
             (let [new_order (shuffle (range (nrow inputs)))]
               (recur new-weights
@@ -117,20 +118,3 @@
                      ($ new_order :all targets)
                      (+ 1 iter))))))))
 
-(defn- conf-row [row]
-  (if (sequential? row)
-    (let [[val index] (max-val-index row)]
-      (assoc (vec (repeat (count row) 0))
-        index 1))
-    (recur [row (- 1 row)])))
-
-(defn confmat [outputs targets]
-  (let [output-classified (matrix (map conf-row outputs))
-        targets-classified (matrix (map conf-row targets))]
-    (mmult (trans output-classified)
-           targets-classified)))
-
-(defn correct-percentage [outputs targets]
-  (let [confmat (confmat outputs targets)]
-    (* 100
-       (/ (trace confmat) (sum-correct confmat)))))
