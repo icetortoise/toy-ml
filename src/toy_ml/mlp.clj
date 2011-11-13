@@ -11,7 +11,7 @@
   (defn- make-random-matrix [[n1 n2]]
     (m-map rand-init (matrix (+ 1 n1) (+ 1 n1) n2)))
   (let [nnodes (flatten [(ncol inputs)
-                         hidden
+                         (filter pos? (filter integer? hidden))
                          (ncol targets)])]
     (map make-random-matrix (each-adj-pair nnodes))))
 
@@ -49,11 +49,12 @@
                  (mmult (intecept (last previous))
                         weight))))
   (let [h-acts (rest (reduce compute-h-act
-                            (cons [inputs] (drop-last weights))))]
+                             (cons [inputs] (drop-last weights))))
+        next-to-outputs (or (last h-acts) inputs)]
     (concat h-acts
             [(m-map (:forward (make-logistic 1))
-                 (mmult (intecept (last h-acts))
-                        (last weights)))])))
+                    (mmult (intecept next-to-outputs)
+                           (last weights)))])))
 
 (defn cost [outputs targets weights reg-coff]
   (/ (+ (sum-correct (mult (minus outputs targets) (minus outputs targets)))
