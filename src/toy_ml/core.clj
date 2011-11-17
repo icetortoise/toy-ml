@@ -21,6 +21,7 @@ applied to a vector."
        (let [r (apply matrix-map f m ms)]
          (try-matrix r)))))
 
+;; a repeat-until-convergence func/macro?
 (defn end-after-iter [iter]
   (fn [n] (if (>= n iter) true false)))
 
@@ -31,6 +32,11 @@ applied to a vector."
     (let [row-sum (reduce plus x)]
       (sum-scalar-or-seq row-sum))))
 
+;(defmacro with-analysis-infor)
+
+
+;; ------data preparation and normalization
+;; ----------------------------------------
 (defn max-val-index [coll]
   (reduce 
    (fn [[val-1 pos-1] [val-2 pos-2]]
@@ -61,9 +67,9 @@ applied to a vector."
 
 
 (defn- take-order [order]
-  (fn [ds] (to-matrix ($ order :all ds))))
+  (fn [ds] ($ order :all ds)))
 
-(defn randomize-to-matrix
+(defn randomize
   ([ds]
      (let [r-order (shuffle (range (nrow ds)))]
        ((take-order r-order) ds)))
@@ -114,3 +120,8 @@ applied to a vector."
                      (assoc (vec (repeat n 0))
                        (value-index x) 1)))
                  column))))
+
+;; ------ test framework to run and evaluate algorithms and
+;; ------ automatically select parameters
+
+;; until-convergence with-params ...

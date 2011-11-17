@@ -36,6 +36,7 @@
                     (nrow outputs)))})
 
 ;; skipping softmax implementation
+;; Use 1-to-N encoding for multiclass for simplicity
 (comment (defn make-softmax []
   {:forward identity
   :backward (fn [targets outputs]
@@ -45,19 +46,20 @@
 (defn mlp-forward [inputs weights forward-fn]
   (defn- compute-h-act [previous weight]
     (conj previous
-          (m-map forward-fn
+          (m-map (:forward (make-logistic 1))
                  (mmult (intecept (last previous))
                         weight))))
   (let [h-acts (rest (reduce compute-h-act
                              (cons [inputs] (drop-last weights))))
         next-to-outputs (or (last h-acts) inputs)]
     (concat h-acts
-            [(m-map (:forward (make-logistic 1))
+            [(m-map forward-fn
                     (mmult (intecept next-to-outputs)
                            (last weights)))])))
 
 (defn cost [outputs targets weights reg-coff]
-  (/ (+ (sum-correct (mult (minus outputs targets) (minus outputs targets)))
+  (/ (+ (/ (sum-correct (mult (minus outputs targets) (minus outputs targets)))
+           2)
         (* (sum (map (fn[w] (sum-correct (mult w w))) weights)) reg-coff))
      (nrow outputs)))
 
@@ -110,7 +112,7 @@
             (mlp-backward inputs targets activations
                           weights (:backward act-fns)
                           reg-coff l-rate)]
-        (if (= 0 (mod iter 100))
+        (if (= 1 (mod iter 100))
           (println  (cost (last activations) targets weights reg-coff)))
         (if (end-fn iter) new-weights
             (let [new_order (shuffle (range (nrow inputs)))]

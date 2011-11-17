@@ -5,19 +5,14 @@
 
 
 ;; load, randomize, train and test with confmat
-
-;; todo: think about macros to help?
-;; todo: no hidden layer
-
-
 (def path-to-data
   "/Users/andywu/projects/toy-ml/src/toy_ml/applications/iris_proc.data")
 
 (def ds (read-dataset path-to-data))
 
-
+;; todo: think about macros to help?
 (defn run-iris [ds]
-  (let [shuffled (randomize-to-matrix ds)
+  (let [shuffled (to-matrix (randomize ds))
         origin-inputs ($ :all (range (dec (ncol shuffled)))
                          shuffled)
         origin-targets (one-to-n ($ :all (dec (ncol shuffled))
