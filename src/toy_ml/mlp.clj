@@ -105,19 +105,27 @@
     (loop [weights weights
            inputs inputs
            targets targets
-           iter 1]
-      (let [activations
-            (mlp-forward inputs weights (:forward act-fns))
-            new-weights
-            (mlp-backward inputs targets activations
-                          weights (:backward act-fns)
-                          reg-coff l-rate)]
+           iter 1
+           cst 100000]
+      (let [[outputs new-weights]
+            (mlp-single-iter inputs targets reg-coff l-rate act-fns weights)
+            new-cst (unreg-cost outputs targets)]
         (if (= 1 (mod iter 100))
-          (println  (cost (last activations) targets weights reg-coff)))
-        (if (end-fn iter) new-weights
+          (println  (cost outputs targets weights reg-coff)))
+        (if (end-fn new-cst cst iter) new-weights
             (let [new_order (shuffle (range (nrow inputs)))]
               (recur new-weights
                      ($ new_order :all inputs)
                      ($ new_order :all targets)
-                     (+ 1 iter))))))))
+                     (+ 1 iter)
+                     new-cst)))))))
 
+(defn mlp-single-iter [inputs targets reg-coff l-rate act-fns weights]
+  (let [activations
+        (mlp-forward inputs weights (:forward act-fns))
+        new-weights
+        (mlp-backward inputs targets activations
+                      weights (:backward act-fns)
+                      reg-coff l-rate)]
+    [(last activations) new-weights]))
+      

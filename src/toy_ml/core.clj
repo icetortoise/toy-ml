@@ -23,7 +23,16 @@ applied to a vector."
 
 ;; a repeat-until-convergence func/macro?
 (defn end-after-iter [iter]
-  (fn [n] (if (>= n iter) true false)))
+  (fn [_ _ n] (if (>= n iter) true false)))
+
+(def default-iter 10000)
+
+(defn end-when-cost-converge-below [threshold]
+  (fn [cur prev iter]
+    (let [ratio (abs (/ (- prev cur) prev))]
+      (if (or (= 0 prev) (= iter default-iter)) true
+          (if (<= ratio threshold)
+            true false)))))
 
 (defn sum-correct [x]
   (defn- sum-scalar-or-seq [x]
@@ -45,26 +54,6 @@ applied to a vector."
    (partition 2 (interleave
                  coll
                  (range (count coll))))))
-                     
-
-(defn- conf-row [row]
-  (if (sequential? row)
-    (let [[val index] (max-val-index row)]
-      (assoc (vec (repeat (count row) 0))
-        index 1))
-    (recur [row (- 1 row)])))
-
-(defn confmat [outputs targets]
-  (let [output-classified (matrix (map conf-row outputs))
-        targets-classified (matrix (map conf-row targets))]
-    (mmult (trans output-classified)
-           targets-classified)))
-
-(defn correct-percentage [outputs targets]
-  (let [confmat (confmat outputs targets)]
-    (* 100
-       (/ (trace confmat) (sum-correct confmat)))))
-
 
 (defn- take-order [order]
   (fn [ds] ($ order :all ds)))
@@ -125,3 +114,26 @@ applied to a vector."
 ;; ------ automatically select parameters
 
 ;; until-convergence with-params ...
+
+(defn- conf-row [row]
+  (if (sequential? row)
+    (let [[val index] (max-val-index row)]
+      (assoc (vec (repeat (count row) 0))
+        index 1))
+    (recur [row (- 1 row)])))
+
+(defn confmat [outputs targets]
+  (let [output-classified (matrix (map conf-row outputs))
+        targets-classified (matrix (map conf-row targets))]
+    (mmult (trans output-classified)
+           targets-classified)))
+
+(defn correct-percentage [outputs targets]
+  (let [confmat (confmat outputs targets)]
+    (* 100
+       (/ (trace confmat) (sum-correct confmat)))))
+
+(defn unreg-cost [outputs targets]
+  (/ (/ (sum-correct (mult (minus outputs targets) (minus outputs targets)))
+        2)        
+     (nrow outputs)))

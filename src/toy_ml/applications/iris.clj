@@ -10,7 +10,6 @@
 
 (def ds (read-dataset path-to-data))
 
-;; todo: think about macros to help?
 (defn run-iris [ds]
   (let [shuffled (to-matrix (randomize ds))
         origin-inputs ($ :all (range (dec (ncol shuffled)))
@@ -22,7 +21,7 @@
         [train-targets test-targets]
         (separate [100 50] origin-targets)
         weights (mlp-train train-inputs train-targets [3] 0.01 0.02
-                           (make-logistic 1) (end-after-iter 1500))]
+                           (make-logistic 1) (end-when-cost-converge-below 0.001))]
     (correct-percentage 
      (last (mlp-forward test-inputs weights (:forward (make-logistic 1))))
      test-targets)))
