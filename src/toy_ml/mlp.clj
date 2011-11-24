@@ -57,6 +57,8 @@
                     (mmult (intecept next-to-outputs)
                            (last weights)))])))
 
+(def mlp-recall (comp last mlp-forward))
+
 (defn cost [outputs targets weights reg-coff]
   (/ (+ (/ (sum-correct (mult (minus outputs targets) (minus outputs targets)))
            2)
@@ -100,26 +102,6 @@
             (reverse (cons delta-out h-deltas))
             (cons inputs (drop-last activations))))))
 
-(defn mlp-train [inputs targets hidden reg-coff l-rate act-fns end-fn]
-  (let [weights (initial-weights inputs targets hidden)]
-    (loop [weights weights
-           inputs inputs
-           targets targets
-           iter 1
-           cst 100000]
-      (let [[outputs new-weights]
-            (mlp-single-iter inputs targets reg-coff l-rate act-fns weights)
-            new-cst (unreg-cost outputs targets)]
-        (if (= 1 (mod iter 100))
-          (println  (cost outputs targets weights reg-coff)))
-        (if (end-fn new-cst cst iter) new-weights
-            (let [new_order (shuffle (range (nrow inputs)))]
-              (recur new-weights
-                     ($ new_order :all inputs)
-                     ($ new_order :all targets)
-                     (+ 1 iter)
-                     new-cst)))))))
-
 (defn mlp-single-iter [inputs targets reg-coff l-rate act-fns weights]
   (let [activations
         (mlp-forward inputs weights (:forward act-fns))
@@ -128,4 +110,58 @@
                       weights (:backward act-fns)
                       reg-coff l-rate)]
     [(last activations) new-weights]))
-      
+
+
+(defn mlp-train [inputs targets hidden reg-coff l-rate act-fns end-fn]
+  (let [weights (initial-weights inputs targets hidden)]
+    (loop [weights weights
+           inputs inputs
+           targets targets
+           iter 1
+           cst-vec [100000]]
+      (let [[outputs new-weights]
+            (mlp-single-iter inputs targets reg-coff l-rate act-fns weights)
+            new-cst (unreg-cost outputs targets)]
+        (if (= 1 (mod iter 100)) (println (last cst-vec) new-cst))
+        (if (end-fn new-cst cst-vec iter) new-weights
+            (let [new_order (shuffle (range (nrow inputs)))]
+              (recur new-weights
+                     ($ new_order :all inputs)
+                     ($ new_order :all targets)
+                     (+ 1 iter)
+                     (conj cst-vec new-cst))))))))
+
+(defn choose-params [inputs targets inputs-val targets-val]      
+  (let [trained (for [hidden [[3] [4]]
+                      reg-coff [0.01 0.03]
+                      l-rate [0.02 0.06]
+                      act-fns [(make-logistic 1)]
+                      end-fn [(end-after-iter 900)]]
+                  (let [weights (mlp-train inputs targets hidden reg-coff l-rate
+                                           act-fns end-fn)
+                        outputs-val (last (mlp-forward inputs-val weights
+                                                       (:forward (make-logistic 1))))]
+                    {:score (correct-percentage outputs-val targets-val)
+                     :weights weights
+                     :hidden hidden
+                     :reg-off reg-coff
+                     :l-rate l-rate
+                     :recall-fn (let [weights weights
+                                      out-fn (:forward (make-logistic 1))]
+                                  (fn [inputs]
+                                    (mlp-forward inputs weights out-fn)))}))]
+    trained))
+
+(comment (defmacro with-params [param-bindings & {:keys [train recall-fn
+                                                score-fn return]}]
+  `(for ~param-bindings
+     (let ~train
+       (let [recall# ~recall-fn]
+         ~(if (= return :all) 'all
+              return))))))
+
+(defmacro with-params [param-bindings train-val-bindings 
+                       & body]
+  `(for ~param-bindings
+     (let ~train-val-bindings
+       (do ~@body))))

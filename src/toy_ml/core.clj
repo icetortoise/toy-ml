@@ -28,8 +28,9 @@ applied to a vector."
 (def default-iter 10000)
 
 (defn end-when-cost-converge-below [threshold]
-  (fn [cur prev iter]
-    (let [ratio (abs (/ (- prev cur) prev))]
+  (fn [cur prev-costs iter]
+    (let [prev (last prev-costs)
+          ratio (abs (/ (- prev cur) prev))]
       (if (or (= 0 prev) (= iter default-iter)) true
           (if (<= ratio threshold)
             true false)))))
