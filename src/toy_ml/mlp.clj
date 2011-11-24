@@ -111,7 +111,7 @@
                       reg-coff l-rate)]
     [(last activations) new-weights]))
 
-
+;; todo: return weights and costs
 (defn mlp-train [inputs targets hidden reg-coff l-rate act-fns end-fn]
   (let [weights (initial-weights inputs targets hidden)]
     (loop [weights weights
@@ -123,7 +123,7 @@
             (mlp-single-iter inputs targets reg-coff l-rate act-fns weights)
             new-cst (unreg-cost outputs targets)]
         (if (= 1 (mod iter 100)) (println (last cst-vec) new-cst))
-        (if (end-fn new-cst cst-vec iter) new-weights
+        (if (end-fn new-cst cst-vec iter) new-weights ;(conj cst-vec new-cst)
             (let [new_order (shuffle (range (nrow inputs)))]
               (recur new-weights
                      ($ new_order :all inputs)
@@ -137,8 +137,9 @@
                       l-rate [0.02 0.06]
                       act-fns [(make-logistic 1)]
                       end-fn [(end-after-iter 900)]]
-                  (let [weights (mlp-train inputs targets hidden reg-coff l-rate
-                                           act-fns end-fn)
+                  (let [weights 
+                        (mlp-train inputs targets hidden reg-coff l-rate
+                                   act-fns end-fn)
                         outputs-val (last (mlp-forward inputs-val weights
                                                        (:forward (make-logistic 1))))]
                     {:score (correct-percentage outputs-val targets-val)
@@ -152,16 +153,17 @@
                                     (mlp-forward inputs weights out-fn)))}))]
     trained))
 
-(comment (defmacro with-params [param-bindings & {:keys [train recall-fn
-                                                score-fn return]}]
-  `(for ~param-bindings
-     (let ~train
-       (let [recall# ~recall-fn]
-         ~(if (= return :all) 'all
-              return))))))
+(defn- value-map [symbol-names]
+  `(apply hash-map
+          (flatten ~(vec (for [x symbol-names]
+                           [(keyword x) x])))))
 
-(defmacro with-params [param-bindings train-val-bindings 
-                       & body]
-  `(for ~param-bindings
-     (let ~train-val-bindings
-       (do ~@body))))
+(defmacro try-params [{:keys [params temp-bindings
+                              score return]}]
+  `(sort (fn [x# y#] (> (first x#) (first y#)))
+         (for ~params
+           (let ~temp-bindings
+             (let [score# ~score]
+               [score# ~(value-map return)])))))
+
+
