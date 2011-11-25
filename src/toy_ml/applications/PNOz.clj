@@ -45,7 +45,8 @@
   (let [dsm (to-matrix ds)
         [inputs targets] (prepare dsm t k)
         [train train-t test test-t] (sep-to-train-test inputs targets)
-        weights (mlp-train train train-t [3] 0.03 1 (make-linear) (end-after-iter 500))]
+        [weights costs]
+        (mlp-train train train-t [3] 0.03 1 (make-linear) (end-after-iter 500))]
     [(last (mlp-forward test weights (:forward (make-linear))))
      test-t]))
 
@@ -53,5 +54,23 @@
   (doto (scatter-plot (range (count out))
                       out)
         (add-points (range (count target))
-                      target)))
+                    target)))
+
+(defn run-with-different-trials [ds]
+  (let [dsm (to-matrix ds)
+        [inputs targets] (prepare dsm t k)
+        [train train-t test test-t] (sep-to-train-test inputs targets)]
+    (try-params {:params [reg-coff [0.01 0.03 0.1]
+                         l-rate [1]]
+                :temp-bindings [[weights costs]
+                                (mlp-train train train-t [3] reg-coff l-rate
+                                           (make-linear) (end-after-iter 500))
+                                outputs (mlp-recall test weights
+                                                    (:forward (make-linear)))]
+                :score (/ 1 (unreg-cost outputs test-t))
+                :return (reg-coff)})))
+                
+                                
+                                
+  
     

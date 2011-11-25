@@ -123,7 +123,7 @@
             (mlp-single-iter inputs targets reg-coff l-rate act-fns weights)
             new-cst (unreg-cost outputs targets)]
         (if (= 1 (mod iter 100)) (println (last cst-vec) new-cst))
-        (if (end-fn new-cst cst-vec iter) new-weights ;(conj cst-vec new-cst)
+        (if (end-fn new-cst cst-vec iter) [new-weights (conj cst-vec new-cst)]
             (let [new_order (shuffle (range (nrow inputs)))]
               (recur new-weights
                      ($ new_order :all inputs)
@@ -137,7 +137,7 @@
                       l-rate [0.02 0.06]
                       act-fns [(make-logistic 1)]
                       end-fn [(end-after-iter 900)]]
-                  (let [weights 
+                  (let [[weights costs]
                         (mlp-train inputs targets hidden reg-coff l-rate
                                    act-fns end-fn)
                         outputs-val (last (mlp-forward inputs-val weights
@@ -152,18 +152,5 @@
                                   (fn [inputs]
                                     (mlp-forward inputs weights out-fn)))}))]
     trained))
-
-(defn- value-map [symbol-names]
-  `(apply hash-map
-          (flatten ~(vec (for [x symbol-names]
-                           [(keyword x) x])))))
-
-(defmacro try-params [{:keys [params temp-bindings
-                              score return]}]
-  `(sort (fn [x# y#] (> (first x#) (first y#)))
-         (for ~params
-           (let ~temp-bindings
-             (let [score# ~score]
-               [score# ~(value-map return)])))))
 
 

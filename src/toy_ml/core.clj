@@ -35,6 +35,11 @@ applied to a vector."
           (if (<= ratio threshold)
             true false)))))
 
+(defn end-when-cost-is-minimized []
+  (fn [cur prev-costs _]
+    (if (> cur (last prev-costs))
+      true false)))
+
 (defn sum-correct [x]
   (defn- sum-scalar-or-seq [x]
     (if (sequential? x) (sum x) x))
@@ -135,6 +140,21 @@ applied to a vector."
        (/ (trace confmat) (sum-correct confmat)))))
 
 (defn unreg-cost [outputs targets]
-  (/ (/ (sum-correct (mult (minus outputs targets) (minus outputs targets)))
+  (/ (/ (sum-correct (mult (minus outputs targets)
+                           (minus outputs targets)))
         2)        
      (nrow outputs)))
+
+(defn- value-map [symbol-names]
+  `(apply hash-map
+          (flatten ~(vec (for [x symbol-names]
+                           [(keyword x) x])))))
+
+(defmacro try-params [&{:keys [params temp-bindings
+                              score return]}]
+  `(sort (fn [x# y#] (> (first x#) (first y#)))
+         (for ~params
+           (let ~temp-bindings
+             (let [score# ~score]
+               [score# ~(value-map return)])))))
+

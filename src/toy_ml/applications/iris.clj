@@ -20,8 +20,8 @@
         (separate [100 50] origin-inputs)
         [train-targets test-targets]
         (separate [100 50] origin-targets)
-        weights (mlp-train train-inputs train-targets [3] 0.01 0.02
-                                   (make-logistic 1) (end-when-cost-converge-below 0.001))]
+        [weights costs] (mlp-train train-inputs train-targets [3] 0.01 0.02
+                                   (make-logistic 1) (end-after-iter 1000))]
     (correct-percentage 
      (mlp-recall test-inputs weights (:forward (make-logistic 1)))
      test-targets)))
@@ -41,7 +41,7 @@
                                  reg-coff [0.01 0.03]
                                  l-rate [0.02 0.06]]
                                 :temp-bindings
-                                [weights (mlp-train inputs targets hidden reg-coff l-rate
+                                [[weights costs] (mlp-train inputs targets hidden reg-coff l-rate
                                                     (make-logistic 1) (end-after-iter 1000))
                                  outputs-val (mlp-recall inputs-val weights
                                                          (:forward (make-logistic 1)))
