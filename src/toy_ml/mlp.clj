@@ -111,7 +111,6 @@
                       reg-coff l-rate)]
     [(last activations) new-weights]))
 
-;; todo: return weights and costs
 (defn mlp-train [inputs targets hidden reg-coff l-rate act-fns end-fn]
   (let [weights (initial-weights inputs targets hidden)]
     (loop [weights weights
