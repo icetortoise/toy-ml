@@ -1,29 +1,29 @@
 (ns toy-ml.svm
-  (:use [clj-ml io classifiers filters])
-  (:import [weka.classifiers.functions LibSVM]))
+  (:use [clj-ml io classifiers filters]
+        [toy-ml core])
+  (:import [weka.classifiers.functions LibSVM]
+           [weka.core SelectedTag]))
 
 ;; converted class attribute to nominal value manually...
 (def iris (load-instances :arff (new java.io.File "/Users/andywu/projects/toy-ml/src/toy_ml/iris_arff.data")))
-(def svm (LibSVM.))
-(.setClassIndex iris 4)
-(classifier-train svm iris)
-(classifier-evaluate svm :dataset iris iris)
-;; todo: separate dataset into training and test set
-;; try different params of svm
 
-;; (defn- separate-index [groups n]
-;;   (let [ng (div groups (sum groups))
-;;         before-last (map (fn [x] (clojure.contrib.math/floor (* n x)))
-;;                          (drop-last ng))
-;;         lst (- n (sum before-last))
-;;         index-sep (concat before-last [lst])]
-;;     (next (reduce (fn [x y]
-;;                     (concat x [(+ (last x) y)]))
-;;                   (cons [0] index-sep)))))
+;; implement clj-ml wrapper for LibSVM
+(defmethod make-classifier [:libsvm :libsvm]
+  ([kind algo & options]
+     ))
 
-;; (defn separate [groups ds]
-;;   (let [seps (separate-index groups (nrow ds))]
-;;     (map (fn [x y]
-;;            ($ (range x y) :all ds))
-;;          (cons 0 (drop-last seps))
-;;          seps)))
+(defn run-svm-iris [ds]
+  (let [svm (LibSVM.)]
+    (.setClassIndex iris 4)
+    (classifier-train svm iris)
+    (classifier-evaluate svm :dataset iris iris)
+    ;; using a polynomial kernel with degree 0/1/2/3/10
+    (try-params :params [d [0 1 2 3 10]
+                         type [(SelectedTag. LibSVM/KERNELTYPE_POLYNOMIAL LibSVM/TAGS_KERNELTYPE )]]
+                :temp-bindings [temp (do (.setKernelType svm  type)
+                                         (.setDegree svm d)
+                                         (classifier-train svm iris))
+                                evaluated  (classifier-evaluate svm :dataset iris iris)]
+                :score  (:correct evaluated)
+                :return [d])))
+
