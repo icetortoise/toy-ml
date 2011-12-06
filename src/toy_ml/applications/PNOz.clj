@@ -60,7 +60,7 @@
   (let [dsm (to-matrix ds)
         [inputs targets] (prepare dsm t k)
         [train train-t test test-t] (sep-to-train-test inputs targets)]
-    (try-params {:params [reg-coff [0.01 0.03 0.1]
+    (try-params :params [reg-coff [0.01 0.03 0.1]
                          l-rate [1]]
                 :temp-bindings [[weights costs]
                                 (mlp-train train train-t [3] reg-coff l-rate
@@ -68,7 +68,7 @@
                                 outputs (mlp-recall test weights
                                                     (:forward (make-linear)))]
                 :score (/ 1 (unreg-cost outputs test-t))
-                :return (reg-coff)})))
+                :return (reg-coff))))
                 
                                 
                                 
