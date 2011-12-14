@@ -48,5 +48,5 @@
                               temp (classifier-train svm iris)
                               evaluated  (classifier-evaluate svm :dataset iris iris)]
               :score  (:correct evaluated)
-              :return [d t]))
+              :return [degree kernel-type]))
 
