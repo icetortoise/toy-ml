@@ -14,14 +14,27 @@
                         x y))
             out1 out2))
 
-(defn params-init [y]
-  [(draw y)
-   (draw y)
-   (sum ($= ($= y - (mean y)) ** 2))
-   (sum ($= ($= y - (mean y)) ** 2))
-   0.5])
+(defn- gen-gaussians [m-s-list]
+  (vec (map (fn [[mean sigma]]
+              (normal-distribution mean sigma))
+            m-s-list)))
 
-(defn gmm-em-seq [y]
+(defn generate-mixture [N mean-sigma-list]
+  (let [distributions (gen-gaussians mean-sigma-list)]
+        (for [n (range N)]
+          (draw (nth distributions
+                     (draw (integer-distribution
+                            (count distributions))))))))
+
+
+(defn GMM-EM [y n-mixture]
+  (defn- params-init []
+    [(draw y)
+     (draw y)
+     (sum ($= ($= y - (mean y)) ** 2))
+     (sum ($= ($= y - (mean y)) ** 2))
+     0.5])
+  
   (defn- compute-gamma [params x]
     (let [[mu1 mu2 s1 s2 pi] params]
       (/ ($= pi * (exp ($= (minus ($= ($= x - mu2) ** 2)) / s2)))
@@ -29,6 +42,7 @@
             ($= ($= 1 - pi) * (exp ($= (minus ($= ($= x - mu1) ** 2)) / s1)))))))
   (defn- compute-gammas [params]
     (map (partial compute-gamma params) y))
+  
   (defn- new-params [gamma]
     (let [mu1 ($= (sum ($= ($= 1 - gamma) * y)) / (sum ($= 1 - gamma)))
           mu2 ($= (sum ($= gamma * y)) / (sum gamma))
@@ -38,9 +52,17 @@
                  / (sum gamma))
           pi ($= (sum gamma) / (count gamma))]
       [mu1 mu2 s1 s2 pi]))
+  
+  (defn- log-likelihood [params]
+    (let [[mu1 mu2 s1 s2 pi] params]
+      (sum (log ($= ($= 1 - pi) * (exp (minus ($= ($= ($= y - mu1) ** 2) / s1)))
+                    + ($= pi * (exp (minus ($= ($= ($= y - mu2) ** 2) / s2)))))))))
+  
   (defn- run-em [params]
     (let [gammas (compute-gammas params)]
       (lazy-seq (cons {:params params
-                       :gammas gammas}
+                       :gammas gammas
+                       :log-likelihood (log-likelihood params)}
                       (run-em (new-params gammas))))))
-  (run-em (params-init y)))
+  {:E compute-gammas :M new-params
+   :infinite-run (fn [] (run-em (params-init)))})
