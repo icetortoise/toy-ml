@@ -53,16 +53,18 @@
           pi ($= (sum gamma) / (count gamma))]
       [mu1 mu2 s1 s2 pi]))
   
-  (defn- log-likelihood [params]
+  (defn- log-likelihoods [params]
+    (defn- pdf-seq [d y]
+      (map (partial pdf d) y))
     (let [[mu1 mu2 s1 s2 pi] params]
-      (sum (log ($= ($= 1 - pi) * (exp (minus ($= ($= ($= y - mu1) ** 2) / s1)))
-                    + ($= pi * (exp (minus ($= ($= ($= y - mu2) ** 2) / s2)))))))))
+      (sum (log ($= ($= ($= 1 - pi) * (pdf-seq (normal-distribution mu1 s1) y)
+                        + ($= pi * (pdf-seq (normal-distribution mu2 s2) y))))))))
   
   (defn- run-em [params]
     (let [gammas (compute-gammas params)]
       (lazy-seq (cons {:params params
                        :gammas gammas
-                       :log-likelihood (log-likelihood params)}
+                       :log-likelihoods (log-likelihoods params)}
                       (run-em (new-params gammas))))))
   {:E compute-gammas :M new-params
    :infinite-run (fn [] (run-em (params-init)))})
