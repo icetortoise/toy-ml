@@ -5,15 +5,6 @@
   (lazy-seq (cons (draw d)
                   (infinite-draw d))))
 
-(def N 100)
-(def out1 (take N (infinite-draw (normal-distribution 6 1))))
-
-(def out2 (take N (infinite-draw (normal-distribution 1 1))))
-
-(def y (map (fn [x y] (if (= 0 (draw (integer-distribution 0 2)))
-                        x y))
-            out1 out2))
-
 (defn- gen-gaussians [m-s-list]
   (vec (map (fn [[mean sigma]]
               (normal-distribution mean sigma))
@@ -26,39 +17,47 @@
                      (draw (integer-distribution
                             (count distributions))))))))
 
-
 (defn GMM-EM [y n-mixture]
   (defn- params-init []
-    [(draw y)
-     (draw y)
-     (sum ($= ($= y - (mean y)) ** 2))
-     (sum ($= ($= y - (mean y)) ** 2))
-     0.5])
+    [(repeatedly n-mixture (fn [] (draw y)))
+     (repeat n-mixture (sum ($= ($= y - (mean y)) ** 2)))
+     (repeat n-mixture (/ 1 n-mixture))])
   
   (defn- compute-gamma [params x]
-    (let [[mu1 mu2 s1 s2 pi] params]
-      (/ ($= pi * (exp ($= (minus ($= ($= x - mu2) ** 2)) / s2)))
-         (+ ($= pi * (exp ($= (minus ($= ($= x - mu2) ** 2)) / s2)))
-            ($= ($= 1 - pi) * (exp ($= (minus ($= ($= x - mu1) ** 2)) / s1)))))))
+    (let [[mu-coll sigma-coll pi-coll] params
+          gamma-seq (map (fn [mu sigma pi]
+                           ($= pi * (exp ($= (minus ($= ($= x - mu) ** 2)) / sigma))))
+                         mu-coll sigma-coll pi-coll)
+          gamma-sum (sum gamma-seq)]
+      (map (fn [g] (/ g gamma-sum)) gamma-seq)))
   (defn- compute-gammas [params]
     (map (partial compute-gamma params) y))
   
-  (defn- new-params [gamma]
-    (let [mu1 ($= (sum ($= ($= 1 - gamma) * y)) / (sum ($= 1 - gamma)))
-          mu2 ($= (sum ($= gamma * y)) / (sum gamma))
-          s1 ($= (sum ($= ($= 1 - gamma) * ($= ($= y - mu1) ** 2)))
-                 / (sum ($= 1 - gamma)))
-          s2 ($= (sum ($= gamma * ($= ($= y - mu2) ** 2)))
-                 / (sum gamma))
-          pi ($= (sum gamma) / (count gamma))]
-      [mu1 mu2 s1 s2 pi]))
+  (defn- new-params [gammas]
+    (let [mat-gammas ((comp trans matrix) gammas)
+          y-trans (trans y)
+          mu-coll (map (fn [gamma]
+                         ($= (sum ($= gamma * y-trans)) / (sum gamma)))
+                       mat-gammas)
+          sigma-coll (map (fn [gamma mu]
+                            ($= (sum ($= gamma * ($= ($= y-trans - mu) ** 2)))
+                                / (sum gamma)))
+                          mat-gammas mu-coll)
+          pi-coll (map (fn [gamma]
+                         ($= (sum gamma) / (count gamma)))
+                       mat-gammas)]
+      [mu-coll sigma-coll pi-coll]))
   
   (defn- log-likelihoods [params]
     (defn- pdf-seq [d y]
       (map (partial pdf d) y))
-    (let [[mu1 mu2 s1 s2 pi] params]
-      (sum (log ($= ($= ($= 1 - pi) * (pdf-seq (normal-distribution mu1 s1) y)
-                        + ($= pi * (pdf-seq (normal-distribution mu2 s2) y))))))))
+    (let [[mu-coll sigma-coll pi-coll] params]
+      (sum (vectorize (map (fn [mu sigma pi]
+                             ($= pi * (log (pdf-seq (normal-distribution mu sigma) y))))
+                           mu-coll sigma-coll pi-coll)))))
+
+;        (sum (log ($= ($= ($= 1 - pi) * (pdf-seq (normal-distribution mu1 s1) y)
+;                        + ($= pi * (pdf-seq (normal-distribution mu2 s2) y))))))))
   
   (defn- run-em [params]
     (let [gammas (compute-gammas params)]
