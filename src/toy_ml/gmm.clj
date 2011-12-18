@@ -55,9 +55,6 @@
       (sum (vectorize (map (fn [mu sigma pi]
                              ($= pi * (log (pdf-seq (normal-distribution mu sigma) y))))
                            mu-coll sigma-coll pi-coll)))))
-
-;        (sum (log ($= ($= ($= 1 - pi) * (pdf-seq (normal-distribution mu1 s1) y)
-;                        + ($= pi * (pdf-seq (normal-distribution mu2 s2) y))))))))
   
   (defn- run-em [params]
     (let [gammas (compute-gammas params)]
