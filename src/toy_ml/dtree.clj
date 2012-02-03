@@ -1,5 +1,6 @@
 (ns toy-ml.dtree
-    (:use [incanter core io]))
+  (:use [incanter core io]
+        [clojure.core.match :only [match]]))
 
 (defn entropy [distribution]
   (sum (map #(if (= 0 %) 0
@@ -73,3 +74,23 @@
   (let [feature (choose-feature ds target gain-fn)
         children (make-children ds feature target gain-fn)]
     {:node feature :children children}))
+
+(declare dtree-classify process-children)
+(defn dtree-classify [tree data-point]
+  (match [tree]
+         [({:node n :children c} :only [:node :children])] (process-children c n data-point)
+         [{:value v}] v))
+
+(defn process-children [children node-name point]
+  (let [node-val (node-name point)]
+    (reduce
+     (fn [prev child]
+       (if (not (nil? prev)) prev
+           (match [child]
+                  [[{node-name node-val}
+                    sub-tree]] (dtree-classify sub-tree point))))
+     nil children)))
+
+(defn dtree-classify-dataset [tree ds]
+  (map (partial dtree-classify tree)
+       (-> ds second second)))
