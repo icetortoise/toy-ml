@@ -73,6 +73,22 @@ applied to a vector."
        (map (take-order r-order)
             (cons ds others)))))
 
+(defn majority [coll]
+  (first (let [groups (group-by identity coll)]
+           (reduce (fn [[key1 val1] [key2 val2]]
+                     (if (> (count val1) (count val2))
+                       [key1 val1] [key2 val2]))
+                   groups))))
+
+(defn most-common [coll]
+  (let [s-map (->> (group-by identity coll)
+                   vals
+                   (sort-by count))]
+    (if (nil? (-> s-map last first))
+      (-> s-map drop-last last first)
+      (-> s-map last first))))
+
+
 (defn norm-column [col]
   (div (minus col (mean col))
        (- (apply max col)

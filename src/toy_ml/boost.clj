@@ -77,19 +77,19 @@
 
 (defn boost [ds targets trainer]
   "dataset -> [label] -> (dataset -> [label] -> weights -> classifier)
-  -> classified result"
+  -> boosted result"
   (loop [weights (init-weights (nrow ds))
          alphas []
-         under-classifiers []
+         base-classifiers []
          iter 1]
     (let [classifier (trainer ds targets weights)]
       (if (or (> iter 100) (> (:error classifier) 0.5))
         {:alphas alphas
-         :under-classifiers under-classifiers
-         :boosted (make-boosted alphas under-classifiers)}
+         :base-classifiers base-classifiers
+         :boosted (make-boosted alphas base-classifiers)}
         (let [alp (alpha (:error classifier))]
           (recur (new-weights weights (:pred-fn classifier)
                               alp ds targets)
                  (conj alphas alp)
-                 (conj under-classifiers (:pred-fn classifier))
+                 (conj base-classifiers (:pred-fn classifier))
                  (+ 1 iter)))))))
