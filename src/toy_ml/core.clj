@@ -97,14 +97,14 @@ applied to a vector."
 (defn normalize [m]
   (trans (matrix (map norm-column (trans m)))))
 
-(defn- separate-index [groups n]
+(defn separate-index [groups n]
   (let [ng (div groups (sum groups))
         before-last (map (fn [x] (clojure.contrib.math/floor (* n x)))
                          (drop-last ng))
         lst (- n (sum before-last))
         index-sep (concat before-last [lst])]
     (next (reduce (fn [x y]
-                    (concat x [(+ (last x) y)]))
+                    (concat x [(int (+ (last x) y))]))
                   (cons [0] index-sep)))))
 
 (defn separate [groups ds]

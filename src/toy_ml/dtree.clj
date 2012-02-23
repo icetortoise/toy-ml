@@ -35,13 +35,6 @@
                                   ($= (ds-size sub-ds) / (ds-size ds))))
                   (vals grouped-map))))))
 
-
-(comment (defn- most-common [coll]
-  (->> (group-by identity coll)
-      vals
-      (sort-by count)
-      last first)))
-
 (declare dtree make-node)
 
 (defn dtree [ds target &
